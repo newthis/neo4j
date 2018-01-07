@@ -38,8 +38,10 @@ import java.util.function.Function;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
@@ -65,7 +67,6 @@ public class FulltextProviderImpl implements FulltextProvider
     /**
      * Creates a provider of fulltext indices for the given database. This is the entry point for all fulltext index
      * operations.
-     *
      * @param db Database that this provider should work with.
      * @param log For logging errors.
      * @param availabilityGuard Used for waiting with populating the index until the database is available.
@@ -74,18 +75,18 @@ public class FulltextProviderImpl implements FulltextProvider
      * @param fileSystem The filesystem to use.
      * @param storeDir Store directory of the database.
      * @param analyzerClassName The Lucene analyzer to use for the {@link LuceneFulltext} created by this factory.
+     * @param config
      */
-    public FulltextProviderImpl( GraphDatabaseService db, Log log, AvailabilityGuard availabilityGuard,
-                             JobScheduler scheduler, TransactionIdStore transactionIdStore,
-                             FileSystemAbstraction fileSystem, File storeDir,
-                             String analyzerClassName ) throws IOException
+    public FulltextProviderImpl( GraphDatabaseService db, Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler,
+            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir,
+            String analyzerClassName, Config config )
     {
         this.db = db;
         this.log = log;
         this.transactionIdStore = transactionIdStore;
         applier = new FulltextUpdateApplier( log, availabilityGuard, scheduler );
         applier.start();
-        factory = new FulltextFactory( fileSystem, storeDir, analyzerClassName );
+        factory = new FulltextFactory( fileSystem, pageCache, storeDir, analyzerClassName, config, log );
         fulltextTransactionEventUpdater = new FulltextTransactionEventUpdater( this, applier );
         nodeProperties = ConcurrentHashMap.newKeySet();
         relationshipProperties = ConcurrentHashMap.newKeySet();
@@ -95,7 +96,7 @@ public class FulltextProviderImpl implements FulltextProvider
     }
 
     @Override
-    public void registerTransactionEventHandler() throws IOException
+    public void registerTransactionEventHandler()
     {
         db.registerTransactionEventHandler( fulltextTransactionEventUpdater );
     }

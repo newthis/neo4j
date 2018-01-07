@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.impl.fulltext.FulltextProvider;
@@ -53,13 +54,11 @@ class BloomKernelExtension extends LifecycleAdapter
     private final AvailabilityGuard availabilityGuard;
     private final JobScheduler scheduler;
     private final Supplier<TransactionIdStore> transactionIdStore;
+    private final PageCache pageCache;
     private FulltextProvider provider;
 
-    BloomKernelExtension( FileSystemAbstraction fileSystem, File storeDir, Config config,
-                          GraphDatabaseService db, Procedures procedures,
-                          LogService logService, AvailabilityGuard availabilityGuard,
-                          JobScheduler scheduler,
-                          Supplier<TransactionIdStore> transactionIdStore )
+    BloomKernelExtension( FileSystemAbstraction fileSystem, File storeDir, Config config, GraphDatabaseService db, Procedures procedures, LogService logService,
+            AvailabilityGuard availabilityGuard, JobScheduler scheduler, Supplier<TransactionIdStore> transactionIdStore, PageCache pageCache )
     {
         this.storeDir = storeDir;
         this.config = config;
@@ -70,6 +69,7 @@ class BloomKernelExtension extends LifecycleAdapter
         this.availabilityGuard = availabilityGuard;
         this.scheduler = scheduler;
         this.transactionIdStore = transactionIdStore;
+        this.pageCache = pageCache;
     }
 
     @Override
@@ -81,7 +81,7 @@ class BloomKernelExtension extends LifecycleAdapter
 
             Log log = logService.getInternalLog( FulltextProviderImpl.class );
             provider = new FulltextProviderImpl( db, log, availabilityGuard, scheduler, transactionIdStore.get(),
-                    fileSystem, storeDir, analyzer );
+                    fileSystem, pageCache, storeDir, analyzer, config );
             provider.openIndex( BLOOM_NODES, NODES );
             provider.openIndex( BLOOM_RELATIONSHIPS, RELATIONSHIPS );
             provider.registerTransactionEventHandler();

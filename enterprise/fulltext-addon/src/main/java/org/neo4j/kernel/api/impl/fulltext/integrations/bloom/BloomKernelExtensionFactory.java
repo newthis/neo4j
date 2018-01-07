@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
@@ -57,6 +58,8 @@ public class BloomKernelExtensionFactory extends KernelExtensionFactory<BloomKer
 
         FileSystemAbstraction fileSystem();
 
+        PageCache pageCache();
+
         Procedures procedures();
 
         LogService logService();
@@ -85,7 +88,8 @@ public class BloomKernelExtensionFactory extends KernelExtensionFactory<BloomKer
         AvailabilityGuard availabilityGuard = dependencies.availabilityGuard();
         JobScheduler scheduler = dependencies.scheduler();
         Supplier<TransactionIdStore> transactionIdStore = dependencies::transactionIdStore;
+        PageCache pageCache = dependencies.pageCache();
         return new BloomKernelExtension(
-                fs, storeDir, config, db, procedures, logService, availabilityGuard, scheduler, transactionIdStore );
+                fs, storeDir, config, db, procedures, logService, availabilityGuard, scheduler, transactionIdStore, pageCache );
     }
 }
